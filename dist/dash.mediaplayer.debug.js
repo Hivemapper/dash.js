@@ -5714,41 +5714,53 @@ function isUndefined(arg) {
 },{}],13:[function(_dereq_,module,exports){
 'use strict';
 
+var isArray = Array.isArray;
+var keyList = Object.keys;
+var hasProp = Object.prototype.hasOwnProperty;
+
 module.exports = function equal(a, b) {
   if (a === b) return true;
 
-  var arrA = Array.isArray(a)
-    , arrB = Array.isArray(b)
-    , i;
+  var arrA = isArray(a)
+    , arrB = isArray(b)
+    , i
+    , length
+    , key;
 
   if (arrA && arrB) {
-    if (a.length != b.length) return false;
-    for (i = 0; i < a.length; i++)
+    length = a.length;
+    if (length != b.length) return false;
+    for (i = 0; i < length; i++)
       if (!equal(a[i], b[i])) return false;
     return true;
   }
 
   if (arrA != arrB) return false;
 
-  if (a && b && typeof a === 'object' && typeof b === 'object') {
-    var keys = Object.keys(a);
-    if (keys.length !== Object.keys(b).length) return false;
+  var dateA = a instanceof Date
+    , dateB = b instanceof Date;
+  if (dateA != dateB) return false;
+  if (dateA && dateB) return a.getTime() == b.getTime();
 
-    var dateA = a instanceof Date
-      , dateB = b instanceof Date;
-    if (dateA && dateB) return a.getTime() == b.getTime();
-    if (dateA != dateB) return false;
+  var regexpA = a instanceof RegExp
+    , regexpB = b instanceof RegExp;
+  if (regexpA != regexpB) return false;
+  if (regexpA && regexpB) return a.toString() == b.toString();
 
-    var regexpA = a instanceof RegExp
-      , regexpB = b instanceof RegExp;
-    if (regexpA && regexpB) return a.toString() == b.toString();
-    if (regexpA != regexpB) return false;
+  if (a instanceof Object && b instanceof Object) {
+    var keys = keyList(a);
+    length = keys.length;
 
-    for (i = 0; i < keys.length; i++)
-      if (!Object.prototype.hasOwnProperty.call(b, keys[i])) return false;
+    if (length !== keyList(b).length)
+      return false;
 
-    for (i = 0; i < keys.length; i++)
-      if(!equal(a[keys[i]], b[keys[i]])) return false;
+    for (i = 0; i < length; i++)
+      if (!hasProp.call(b, keys[i])) return false;
+
+    for (i = 0; i < length; i++) {
+      key = keys[i];
+      if (!equal(a[key], b[key])) return false;
+    }
 
     return true;
   }
@@ -5759,7 +5771,7 @@ module.exports = function equal(a, b) {
 },{}],14:[function(_dereq_,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
-  var eLen = nBytes * 8 - mLen - 1
+  var eLen = (nBytes * 8) - mLen - 1
   var eMax = (1 << eLen) - 1
   var eBias = eMax >> 1
   var nBits = -7
@@ -5772,12 +5784,12 @@ exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   e = s & ((1 << (-nBits)) - 1)
   s >>= (-nBits)
   nBits += eLen
-  for (; nBits > 0; e = e * 256 + buffer[offset + i], i += d, nBits -= 8) {}
+  for (; nBits > 0; e = (e * 256) + buffer[offset + i], i += d, nBits -= 8) {}
 
   m = e & ((1 << (-nBits)) - 1)
   e >>= (-nBits)
   nBits += mLen
-  for (; nBits > 0; m = m * 256 + buffer[offset + i], i += d, nBits -= 8) {}
+  for (; nBits > 0; m = (m * 256) + buffer[offset + i], i += d, nBits -= 8) {}
 
   if (e === 0) {
     e = 1 - eBias
@@ -5792,7 +5804,7 @@ exports.read = function (buffer, offset, isLE, mLen, nBytes) {
 
 exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   var e, m, c
-  var eLen = nBytes * 8 - mLen - 1
+  var eLen = (nBytes * 8) - mLen - 1
   var eMax = (1 << eLen) - 1
   var eBias = eMax >> 1
   var rt = (mLen === 23 ? Math.pow(2, -24) - Math.pow(2, -77) : 0)
@@ -5825,7 +5837,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
       m = 0
       e = eMax
     } else if (e + eBias >= 1) {
-      m = (value * c - 1) * Math.pow(2, mLen)
+      m = ((value * c) - 1) * Math.pow(2, mLen)
       e = e + eBias
     } else {
       m = value * Math.pow(2, eBias - 1) * Math.pow(2, mLen)
@@ -5951,7 +5963,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
                     for (c = 1; c < estack[0].contents.length; c++) {
 
                         if (estack[0].contents[c] instanceof AnonymousSpan &&
-                            cs[cs.length - 1] instanceof AnonymousSpan) {
+                                cs[cs.length - 1] instanceof AnonymousSpan) {
 
                             cs[cs.length - 1].text += estack[0].contents[c].text;
 
@@ -5970,9 +5982,8 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
                 // remove redundant nested anonymous spans (9.3.3(1)(c))
 
                 if (estack[0] instanceof Span &&
-                    estack[0].contents.length === 1 &&
-                    estack[0].contents[0] instanceof AnonymousSpan &&
-                    estack[0].text === null) {
+                        estack[0].contents.length === 1 &&
+                        estack[0].contents[0] instanceof AnonymousSpan) {
 
                     estack[0].text = estack[0].contents[0].text;
                     delete estack[0].contents;
@@ -5982,15 +5993,15 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
             } else if (estack[0] instanceof ForeignElement) {
 
                 if (estack[0].node.uri === imscNames.ns_tt &&
-                    estack[0].node.local === 'metadata') {
+                        estack[0].node.local === 'metadata') {
 
                     /* leave the metadata element */
 
                     metadata_depth--;
 
                 } else if (metadata_depth > 0 &&
-                    metadataHandler &&
-                    'onCloseTag' in metadataHandler) {
+                        metadataHandler &&
+                        'onCloseTag' in metadataHandler) {
 
                     /* end of child of metadata element */
 
@@ -6024,17 +6035,17 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
             } else if (estack[0] instanceof Span || estack[0] instanceof P) {
 
                 /* create an anonymous span */
-                
+
                 var s = new AnonymousSpan();
-              
+
                 s.initFromText(doc, estack[0], str, xmlspacestack[0], errorHandler);
 
                 estack[0].contents.push(s);
 
             } else if (estack[0] instanceof ForeignElement &&
-                metadata_depth > 0 &&
-                metadataHandler &&
-                'onText' in metadataHandler) {
+                    metadata_depth > 0 &&
+                    metadataHandler &&
+                    'onText' in metadataHandler) {
 
                 /* text node within a child of metadata element */
 
@@ -6220,8 +6231,6 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 
                         doc.head.layout.regions[r.id] = r;
 
-                        doc._registerEvent(r);
-
                     }
 
                     estack.unshift(r);
@@ -6244,8 +6253,6 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 
                     b.initFromNode(doc, node, errorHandler);
 
-                    doc._registerEvent(b);
-
                     doc.body = b;
 
                     estack.unshift(b);
@@ -6261,8 +6268,6 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
                     var d = new Div();
 
                     d.initFromNode(doc, estack[0], node, errorHandler);
-
-                    doc._registerEvent(d);
 
                     estack[0].contents.push(d);
 
@@ -6280,8 +6285,6 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 
                     p.initFromNode(doc, estack[0], node, errorHandler);
 
-                    doc._registerEvent(p);
-
                     estack[0].contents.push(p);
 
                     estack.unshift(p);
@@ -6297,8 +6300,6 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
                     var ns = new Span();
 
                     ns.initFromNode(doc, estack[0], node, xmlspacestack[0], errorHandler);
-
-                    doc._registerEvent(ns);
 
                     estack[0].contents.push(ns);
 
@@ -6316,8 +6317,6 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 
                     nb.initFromNode(doc, estack[0], node, errorHandler);
 
-                    doc._registerEvent(nb);
-
                     estack[0].contents.push(nb);
 
                     estack.unshift(nb);
@@ -6325,11 +6324,11 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
                 } else if (node.local === 'set') {
 
                     if (!(estack[0] instanceof Span ||
-                        estack[0] instanceof P ||
-                        estack[0] instanceof Div ||
-                        estack[0] instanceof Body ||
-                        estack[0] instanceof Region ||
-                        estack[0] instanceof Br)) {
+                            estack[0] instanceof P ||
+                            estack[0] instanceof Div ||
+                            estack[0] instanceof Body ||
+                            estack[0] instanceof Region ||
+                            estack[0] instanceof Br)) {
 
                         reportFatal(errorHandler, "Parent of <set> element is not a content element or a region at " + this.line + "," + this.column + ")");
 
@@ -6338,8 +6337,6 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
                     var st = new Set();
 
                     st.initFromNode(doc, estack[0], node, errorHandler);
-
-                    doc._registerEvent(st);
 
                     estack[0].sets.push(st);
 
@@ -6365,17 +6362,17 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
             if (estack[0] instanceof ForeignElement) {
 
                 if (node.uri === imscNames.ns_tt &&
-                    node.local === 'metadata') {
+                        node.local === 'metadata') {
 
                     /* enter the metadata element */
 
                     metadata_depth++;
 
                 } else if (
-                    metadata_depth > 0 &&
-                    metadataHandler &&
-                    'onOpenTag' in metadataHandler
-                    ) {
+                        metadata_depth > 0 &&
+                        metadataHandler &&
+                        'onOpenTag' in metadataHandler
+                        ) {
 
                     /* start of child of metadata element */
 
@@ -6383,11 +6380,11 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 
                     for (var a in node.attributes) {
                         attrs[node.attributes[a].uri + " " + node.attributes[a].local] =
-                            {
-                                uri: node.attributes[a].uri,
-                                local: node.attributes[a].local,
-                                value: node.attributes[a].value
-                            };
+                                {
+                                    uri: node.attributes[a].uri,
+                                    local: node.attributes[a].local,
+                                    value: node.attributes[a].value
+                                };
                     }
 
                     metadataHandler.onOpenTag(node.uri, node.local, attrs);
@@ -6433,14 +6430,156 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 
         if (!hasRegions) {
 
-            var dr = Region.createDefaultRegion();
+            /* create default region */
+
+            var dr = Region.prototype.createDefaultRegion();
 
             doc.head.layout.regions[dr.id] = dr;
 
         }
 
+        /* resolve desired timing for regions */
+
+        for (var region_i in doc.head.layout.regions) {
+
+            resolveTiming(doc, doc.head.layout.regions[region_i], null, null);
+
+        }
+
+        /* resolve desired timing for content elements */
+
+        if (doc.body) {
+            resolveTiming(doc, doc.body, null, null);
+        }
+
         return doc;
     };
+
+    function resolveTiming(doc, element, prev_sibling, parent) {
+
+        /* are we in a seq container? */
+
+        var isinseq = parent && parent.timeContainer === "seq";
+
+        /* determine implicit begin */
+
+        var implicit_begin = 0; /* default */
+
+        if (parent) {
+
+            if (isinseq && prev_sibling) {
+
+                /*
+                 * if seq time container, offset from the previous sibling end
+                 */
+
+                implicit_begin = prev_sibling.end;
+
+
+            } else {
+
+                implicit_begin = parent.begin;
+
+            }
+
+        }
+
+        /* compute desired begin */
+
+        element.begin = element.explicit_begin ? element.explicit_begin + implicit_begin : implicit_begin;
+
+
+        /* determine implicit end */
+
+        var implicit_end = element.begin;
+
+        var s = null;
+
+        for (var set_i in element.sets) {
+
+            resolveTiming(doc, element.sets[set_i], s, element);
+
+            if (element.timeContainer === "seq") {
+
+                implicit_end = element.sets[set_i].end;
+
+            } else {
+
+                implicit_end = Math.max(implicit_end, element.sets[set_i].end);
+
+            }
+
+            s = element.sets[set_i];
+
+        }
+
+        if (!('contents' in element)) {
+
+            /* anonymous spans and regions and <set> and <br>s and spans with only children text nodes */
+
+            if (isinseq) {
+
+                /* in seq container, implicit duration is zero */
+
+                implicit_end = element.begin;
+
+            } else {
+
+                /* in par container, implicit duration is indefinite */
+
+                implicit_end = Number.POSITIVE_INFINITY;
+
+            }
+
+        } else {
+
+            for (var content_i in element.contents) {
+
+                resolveTiming(doc, element.contents[content_i], s, element);
+
+                if (element.timeContainer === "seq") {
+
+                    implicit_end = element.contents[content_i].end;
+
+                } else {
+
+                    implicit_end = Math.max(implicit_end, element.contents[content_i].end);
+
+                }
+
+                s = element.contents[content_i];
+
+            }
+
+        }
+
+        /* determine desired end */
+        /* it is never made really clear in SMIL that the explicit end is offset by the implicit begin */
+
+        if (element.explicit_end !== null && element.explicit_dur !== null) {
+
+            element.end = Math.min(element.begin + element.explicit_dur, implicit_begin + element.explicit_end);
+
+        } else if (element.explicit_end === null && element.explicit_dur !== null) {
+
+            element.end = element.begin + element.explicit_dur;
+
+        } else if (element.explicit_end !== null && element.explicit_dur === null) {
+
+            element.end = implicit_begin + element.explicit_end;
+
+        } else {
+
+            element.end = implicit_end;
+        }
+
+        delete element.explicit_begin;
+        delete element.explicit_dur;
+        delete element.explicit_end;
+
+        doc._registerEvent(element);
+
+    }
 
     function ForeignElement(node) {
         this.node = node;
@@ -6506,7 +6645,8 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 
         /* skip if begin is not < then end */
 
-        if (elem.end <= elem.begin) return;
+        if (elem.end <= elem.begin)
+            return;
 
         /* index the begin time of the event */
 
@@ -6595,25 +6735,35 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
     }
 
     /*
-     * Represents a TTML Content element
+     * TTML element utility functions
      * 
      */
 
     function ContentElement(kind) {
         this.kind = kind;
-        this.begin = null;
-        this.end = null;
-        this.styleAttrs = null;
-        this.regionID = null;
-        this.sets = null;
-        this.timeContainer = null;
     }
 
-    ContentElement.prototype.initFromNode = function (doc, parent, node, errorHandler) {
+    function IdentifiedElement(id) {
+        this.id = id;
+    }
 
-        var t = processTiming(doc, parent, node, errorHandler);
-        this.begin = t.begin;
-        this.end = t.end;
+    IdentifiedElement.prototype.initFromNode = function (doc, parent, node, errorHandler) {
+        this.id = elementGetXMLID(node);
+    };
+
+    function LayoutElement(id) {
+        this.regionID = id;
+    }
+
+    LayoutElement.prototype.initFromNode = function (doc, parent, node, errorHandler) {
+        this.regionID = elementGetRegionID(node);
+    };
+
+    function StyledElement(styleAttrs) {
+        this.styleAttrs = styleAttrs;
+    }
+
+    StyledElement.prototype.initFromNode = function (doc, parent, node, errorHandler) {
 
         this.styleAttrs = elementGetStyles(node, errorHandler);
 
@@ -6621,25 +6771,57 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
             mergeReferencedStyles(doc.head.styling, elementGetStyleRefs(node), this.styleAttrs, errorHandler);
         }
 
-        this.regionID = elementGetRegionID(node);
+    };
 
+    function AnimatedElement(sets) {
+        this.sets = sets;
+    }
+
+    AnimatedElement.prototype.initFromNode = function (doc, parent, node, errorHandler) {
         this.sets = [];
+    };
+
+    function ContainerElement(contents) {
+        this.contents = contents;
+    }
+
+    ContainerElement.prototype.initFromNode = function (doc, parent, node, errorHandler) {
+        this.contents = [];
+    };
+
+    function TimedElement(explicit_begin, explicit_end, explicit_dur) {
+        this.explicit_begin = explicit_begin;
+        this.explicit_end = explicit_end;
+        this.explicit_dur = explicit_dur;
+    }
+
+    TimedElement.prototype.initFromNode = function (doc, parent, node, errorHandler) {
+        var t = processTiming(doc, parent, node, errorHandler);
+        this.explicit_begin = t.explicit_begin;
+        this.explicit_end = t.explicit_end;
+        this.explicit_dur = t.explicit_dur;
 
         this.timeContainer = elementGetTimeContainer(node, errorHandler);
-
     };
+
 
     /*
      * Represents a TTML body element
      */
 
+
+
     function Body() {
         ContentElement.call(this, 'body');
     }
 
+
     Body.prototype.initFromNode = function (doc, node, errorHandler) {
-        ContentElement.prototype.initFromNode.call(this, doc, null, node, errorHandler);
-        this.contents = [];
+        StyledElement.prototype.initFromNode.call(this, doc, null, node, errorHandler);
+        TimedElement.prototype.initFromNode.call(this, doc, null, node, errorHandler);
+        AnimatedElement.prototype.initFromNode.call(this, doc, null, node, errorHandler);
+        LayoutElement.prototype.initFromNode.call(this, doc, null, node, errorHandler);
+        ContainerElement.prototype.initFromNode.call(this, doc, null, node, errorHandler);
     };
 
     /*
@@ -6651,8 +6833,11 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
     }
 
     Div.prototype.initFromNode = function (doc, parent, node, errorHandler) {
-        ContentElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
-        this.contents = [];
+        StyledElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
+        TimedElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
+        AnimatedElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
+        LayoutElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
+        ContainerElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
     };
 
     /*
@@ -6664,8 +6849,11 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
     }
 
     P.prototype.initFromNode = function (doc, parent, node, errorHandler) {
-        ContentElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
-        this.contents = [];
+        StyledElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
+        TimedElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
+        AnimatedElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
+        LayoutElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
+        ContainerElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
     };
 
     /*
@@ -6674,27 +6862,29 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 
     function Span() {
         ContentElement.call(this, 'span');
-        this.space = null;
     }
 
     Span.prototype.initFromNode = function (doc, parent, node, xmlspace, errorHandler) {
-        ContentElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
+        StyledElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
+        TimedElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
+        AnimatedElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
+        LayoutElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
+        ContainerElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
+
         this.space = xmlspace;
-        this.contents = [];
     };
-    
+
     /*
      * Represents a TTML anonymous span element
      */
-    
+
     function AnonymousSpan() {
         ContentElement.call(this, 'span');
-        this.space = null;
-        this.text = null;
     }
-    
+
     AnonymousSpan.prototype.initFromText = function (doc, parent, text, xmlspace, errorHandler) {
-        ContentElement.prototype.initFromNode.call(this, doc, parent, null, errorHandler);
+        TimedElement.prototype.initFromNode.call(this, doc, parent, null, errorHandler);
+
         this.text = text;
         this.space = xmlspace;
     };
@@ -6708,7 +6898,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
     }
 
     Br.prototype.initFromNode = function (doc, parent, node, errorHandler) {
-        ContentElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
+        LayoutElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
     };
 
     /*
@@ -6717,36 +6907,24 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
      */
 
     function Region() {
-        this.id = null;
-        this.begin = null;
-        this.end = null;
-        this.styleAttrs = null;
-        this.sets = null;
     }
 
-    Region.createDefaultRegion = function () {
+    Region.prototype.createDefaultRegion = function () {
         var r = new Region();
 
-        r.id = '';
-        r.begin = 0;
-        r.end = Number.POSITIVE_INFINITY;
-        r.styleAttrs = {};
-        r.sets = [];
+        IdentifiedElement.call(r, '');
+        StyledElement.call(r, {});
+        AnimatedElement.call(r, []);
+        TimedElement.call(r, 0, Number.POSITIVE_INFINITY, null);
 
         return r;
     };
 
     Region.prototype.initFromNode = function (doc, node, errorHandler) {
-
-        this.id = elementGetXMLID(node);
-
-        var t = processTiming(doc, null, node, errorHandler);
-        this.begin = t.begin;
-        this.end = t.end;
-
-        this.styleAttrs = elementGetStyles(node, errorHandler);
-
-        this.sets = [];
+        IdentifiedElement.prototype.initFromNode.call(this, doc, null, node, errorHandler);
+        StyledElement.prototype.initFromNode.call(this, doc, null, node, errorHandler);
+        TimedElement.prototype.initFromNode.call(this, doc, null, node, errorHandler);
+        AnimatedElement.prototype.initFromNode.call(this, doc, null, node, errorHandler);
 
         /* immediately merge referenced styles */
 
@@ -6762,20 +6940,16 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
      */
 
     function Set() {
-        this.begin = null;
-        this.end = null;
-        this.qname = null;
-        this.value = null;
     }
 
     Set.prototype.initFromNode = function (doc, parent, node, errorHandler) {
 
-        var t = processTiming(doc, parent, node, errorHandler);
-
-        this.begin = t.begin;
-        this.end = t.end;
+        TimedElement.prototype.initFromNode.call(this, doc, parent, node, errorHandler);
 
         var styles = elementGetStyles(node, errorHandler);
+
+        this.qname = null;
+        this.value = null;
 
         for (var qname in styles) {
 
@@ -6880,7 +7054,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
         for (var i in node.attributes) {
 
             if (node.attributes[i].uri === ns &&
-                node.attributes[i].local === name) {
+                    node.attributes[i].local === name) {
 
                 return node.attributes[i].value;
             }
@@ -7033,7 +7207,8 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 
         if (trattr === null) {
 
-            if (fps_attr !== null) tr = efps;
+            if (fps_attr !== null)
+                tr = efps;
 
         } else {
 
@@ -7060,7 +7235,8 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 
         var attr = findAttribute(node, imscNames.ns_tts, "extent");
 
-        if (attr === null) return null;
+        if (attr === null)
+            return null;
 
         var s = attr.split(" ");
 
@@ -7131,8 +7307,8 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
         } else if ((m = CLOCK_TIME_FRACTION_RE.exec(str)) !== null) {
 
             r = parseInt(m[1]) * 3600 +
-                parseInt(m[2]) * 60 +
-                parseFloat(m[3]);
+                    parseInt(m[2]) * 60 +
+                    parseFloat(m[3]);
 
         } else if ((m = CLOCK_TIME_FRAMES_RE.exec(str)) !== null) {
 
@@ -7141,9 +7317,9 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
             if (effectiveFrameRate !== null) {
 
                 r = parseInt(m[1]) * 3600 +
-                    parseInt(m[2]) * 60 +
-                    parseInt(m[3]) +
-                    (m[4] === null ? 0 : parseInt(m[4]) / effectiveFrameRate);
+                        parseInt(m[2]) * 60 +
+                        parseInt(m[3]) +
+                        (m[4] === null ? 0 : parseInt(m[4]) / effectiveFrameRate);
             }
 
         }
@@ -7153,40 +7329,31 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 
     function processTiming(doc, parent, node, errorHandler) {
 
-        /* Q: what does this do <div b=1 e=3><p b=1 e=5> ?*/
-        /* Q: are children clipped by parent time interval? */
+        /* determine explicit begin */
 
-        var isseq = parent && parent.timeContainer === "seq";
-
-        /* retrieve begin value */
-
-        var b = 0;
+        var explicit_begin = null;
 
         if (node && 'begin' in node.attributes) {
 
-            b = parseTimeExpression(doc.tickRate, doc.effectiveFrameRate, node.attributes.begin.value);
+            explicit_begin = parseTimeExpression(doc.tickRate, doc.effectiveFrameRate, node.attributes.begin.value);
 
-            if (b === null) {
+            if (explicit_begin === null) {
 
                 reportWarning(errorHandler, "Malformed begin value " + node.attributes.begin.value + " (using 0)");
-
-                b = 0;
 
             }
 
         }
 
-        /* retrieve dur value */
+        /* determine explicit duration */
 
-        /* NOTE: end is not meaningful on seq container children and dur is equal to 0 if not specified */
-
-        var d = isseq ? 0 : null;
+        var explicit_dur = null;
 
         if (node && 'dur' in node.attributes) {
 
-            d = parseTimeExpression(doc.tickRate, doc.effectiveFrameRate, node.attributes.dur.value);
+            explicit_dur = parseTimeExpression(doc.tickRate, doc.effectiveFrameRate, node.attributes.dur.value);
 
-            if (d === null) {
+            if (explicit_dur === null) {
 
                 reportWarning(errorHandler, "Malformed dur value " + node.attributes.dur.value + " (ignoring)");
 
@@ -7194,15 +7361,15 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 
         }
 
-        /* retrieve end value */
+        /* determine explicit end */
 
-        var e = null;
+        var explicit_end = null;
 
         if (node && 'end' in node.attributes) {
 
-            e = parseTimeExpression(doc.tickRate, doc.effectiveFrameRate, node.attributes.end.value);
+            explicit_end = parseTimeExpression(doc.tickRate, doc.effectiveFrameRate, node.attributes.end.value);
 
-            if (e === null) {
+            if (explicit_end === null) {
 
                 reportWarning(errorHandler, "Malformed end value (ignoring)");
 
@@ -7210,57 +7377,9 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 
         }
 
-        /* compute starting offset */
-
-        var start_off = 0;
-
-        if (parent) {
-
-            if (isseq && 'contents' in parent && parent.contents.length > 0) {
-
-                /*
-                 * if seq time container, offset from the previous sibling end
-                 */
-
-                start_off = parent.contents[parent.contents.length - 1].end;
-
-
-            } else {
-
-                /* 
-                 * retrieve parent begin. Assume 0 if no parent.
-                 * 
-                 */
-
-                start_off = parent.begin || 0;
-
-            }
-
-        }
-
-        /* offset begin per time container semantics */
-
-        b += start_off;
-
-        /* set end */
-
-        if (d !== null) {
-
-            // use dur if specified
-
-            e = b + d;
-
-        } else {
-
-            /* retrieve parent end, or +infinity if none */
-
-            var parent_e = (parent && 'end' in parent) ? parent.end : Number.POSITIVE_INFINITY;
-
-            e = (e !== null) ? e + start_off : parent_e;
-
-        }
-
-        return {begin: b, end: e};
+        return {explicit_begin: explicit_begin,
+            explicit_end: explicit_end,
+            explicit_dur: explicit_dur};
 
     }
 
@@ -7396,10 +7515,10 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 
 
 })(typeof exports === 'undefined' ? this.imscDoc = {} : exports,
-    typeof sax === 'undefined' ? _dereq_(42) : sax,
-    typeof imscNames === 'undefined' ? _dereq_(19) : imscNames,
-    typeof imscStyles === 'undefined' ? _dereq_(20) : imscStyles,
-    typeof imscUtils === 'undefined' ? _dereq_(21) : imscUtils);
+        typeof sax === 'undefined' ? _dereq_(42) : sax,
+        typeof imscNames === 'undefined' ? _dereq_(19) : imscNames,
+        typeof imscStyles === 'undefined' ? _dereq_(20) : imscStyles,
+        typeof imscUtils === 'undefined' ? _dereq_(21) : imscUtils);
 
 },{"19":19,"20":20,"21":21,"42":42}],16:[function(_dereq_,module,exports){
 /* 
@@ -7474,16 +7593,16 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
      * @return {Object} ISD state to be provided when this funtion is called for the next ISD
      */
 
-    imscHTML.render = function (    isd,
-                                    element,
-                                    imgResolver,
-                                    eheight,
-                                    ewidth,
-                                    displayForcedOnlyMode,
-                                    errorHandler,
-                                    previousISDState,
-                                    enableRollUp
-                                ) {
+    imscHTML.render = function (isd,
+        element,
+        imgResolver,
+        eheight,
+        ewidth,
+        displayForcedOnlyMode,
+        errorHandler,
+        previousISDState,
+        enableRollUp
+        ) {
 
         /* maintain aspect ratio if specified */
 
@@ -7528,8 +7647,13 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
             isd: isd,
             errorHandler: errorHandler,
             previousISDState: previousISDState,
-            enableRollUp : enableRollUp || false,
-            currentISDState: {}
+            enableRollUp: enableRollUp || false,
+            currentISDState: {},
+            flg: null, /* current fillLineGap value if active, null otherwise */
+            lp: null, /* current linePadding value if active, null otherwise */
+            mra: null, /* current multiRowAlign value if active, null otherwise */
+            ipd: null, /* inline progression direction (lr, rl, tb) */
+            bpd: null /* block progression direction (lr, rl, tb) */
         };
 
         element.appendChild(rootcontainer);
@@ -7586,6 +7710,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
         }
 
         /* override UA default margin */
+        /* TODO: should apply to <p> only */
 
         e.style.margin = "0";
 
@@ -7607,12 +7732,66 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 
         var proc_e = e;
 
+        /* remember writing direction */
 
-        // handle multiRowAlign and linePadding
+        if (isd_element.kind === "region") {
+
+            var wdir = isd_element.styleAttrs[imscStyles.byName.writingMode.qname];
+
+            if (wdir === "lrtb" || wdir === "lr") {
+
+                context.ipd = "lr";
+                context.bpd = "tb";
+
+            } else if (wdir === "rltb" || wdir === "rl") {
+
+                context.ipd = "rl";
+                context.bpd = "tb";
+
+            } else if (wdir === "tblr") {
+
+                context.ipd = "tb";
+                context.bpd = "lr";
+
+            } else if (wdir === "tbrl" || wdir === "tb") {
+
+                context.ipd = "tb";
+                context.bpd = "rl";
+
+            }
+
+        }
+
+        /* do we have linePadding ? */
+
+        var lp = isd_element.styleAttrs[imscStyles.byName.linePadding.qname];
+
+        if (lp && lp > 0) {
+
+            /* apply padding to the <p> so that line padding does not cause line wraps */
+
+            if (context.bpd === "tb") {
+
+                proc_e.style.paddingLeft = lp * context.h + "px";
+                proc_e.style.paddingRight = lp * context.h + "px";
+
+            } else {
+
+                proc_e.style.paddingTop = lp * context.h + "px";
+                proc_e.style.paddingBottom = lp * context.h + "px";
+
+            }
+
+            context.lp = lp;
+        }
+
+        // do we have multiRowAlign?
 
         var mra = isd_element.styleAttrs[imscStyles.byName.multiRowAlign.qname];
 
         if (mra && mra !== "auto") {
+
+            /* create inline block to handle multirowAlign */
 
             var s = document.createElement("span");
 
@@ -7628,19 +7807,18 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 
         }
 
-        var lp = isd_element.styleAttrs[imscStyles.byName.linePadding.qname];
+        /* remember we are filling line gaps */
 
-        if (lp && lp > 0) {
-
-            context.lp = lp;
-
+        if (isd_element.styleAttrs[imscStyles.byName.fillLineGap.qname]) {
+            context.flg = true;
         }
 
-        // wrap characters in spans to find the line wrap locations
 
         if (isd_element.kind === "span" && isd_element.text) {
 
-            if (context.lp || context.mra) {
+            if (context.lp || context.mra || context.flg) {
+
+                // wrap characters in spans to find the line wrap locations
 
                 for (var j = 0; j < isd_element.text.length; j++) {
 
@@ -7653,12 +7831,15 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
                 }
 
             } else {
+
                 e.textContent = isd_element.text;
+
             }
         }
 
-
         dom_parent.appendChild(e);
+
+        /* process the children of the ISD element */
 
         for (var k in isd_element.contents) {
 
@@ -7666,26 +7847,52 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 
         }
 
-        // handle linePadding and multiRowAlign
+        /* list of lines */
 
-        if ((context.lp || context.mra) && isd_element.kind === "p") {
+        var linelist = [];
 
-            var elist = [];
 
-            constructElementList(proc_e, elist, "red");
+        /* paragraph processing */
+        /* TODO: linePadding only supported for horizontal scripts */
 
-            /* TODO: linePadding only supported for horizontal scripts */
+        if ((context.lp || context.mra || context.flg) && isd_element.kind === "p") {
 
-            processLinePaddingAndMultiRowAlign(elist, context.lp * context.h);
+            constructLineList(context, proc_e, linelist, null);
 
-            /* TODO: clean-up the spans ? */
+            /* insert line breaks for multirowalign */
 
-            if (context.lp)
-                delete context.lp;
-            if (context.mra)
-                delete context.mra;
+            if (context.mra) {
+
+                applyMultiRowAlign(linelist);
+
+                context.mra = null;
+
+            }
+
+            /* add linepadding */
+
+            if (context.lp) {
+
+                applyLinePadding(linelist, context.lp * context.h, context);
+
+                context.lp = null;
+
+            }
+
+            /* fill line gaps linepadding */
+
+            if (context.flg) {
+
+                var par_edges = rect2edges(proc_e.getBoundingClientRect(), context);
+
+                applyFillLineGap(linelist, par_edges.before, par_edges.after, context);
+
+                context.flg = null;
+
+            }
 
         }
+
 
         /* region processing */
 
@@ -7693,16 +7900,12 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 
             /* build line list */
 
-            var linelist = [];
-
-            constructLineList(proc_e, linelist);
+            constructLineList(context, proc_e, linelist);
 
             /* perform roll up if needed */
-            
-            var wdir = isd_element.styleAttrs[imscStyles.byName.writingMode.qname];
 
-            if ((wdir === "lrtb" || wdir === "lr" || wdir === "rltb" || wdir === "rl") &&
-                context.enableRollUp && 
+            if ((context.bpd === "tb") &&
+                context.enableRollUp &&
                 isd_element.contents.length > 0 &&
                 isd_element.styleAttrs[imscStyles.byName.displayAlign.qname] === 'after') {
 
@@ -7722,19 +7925,210 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
                     context.previousISDState[rb.id].plist[context.previousISDState[rb.id].plist.length - 1].text) {
 
                     var body_elem = e.firstElementChild;
+                    
+                    var h = rb.plist[rb.plist.length - 1].after - rb.plist[rb.plist.length - 1].before;
 
-                    body_elem.style.bottom = "-" + rb.plist[rb.plist.length - 1].height + "px";
+                    body_elem.style.bottom = "-" + h + "px";
                     body_elem.style.transition = "transform 0.4s";
                     body_elem.style.position = "relative";
-                    body_elem.style.transform = "translateY(-" + rb.plist[rb.plist.length - 1].height + "px)";
+                    body_elem.style.transform = "translateY(-" + h + "px)";
+
+                }
+
+            }
+
+            /* TODO: clean-up the spans ? */
+
+        }
+    }
+
+    function applyLinePadding(lineList, lp, context) {
+
+        for (var i in lineList) {
+
+            var l = lineList[i].elements.length;
+
+            var se = lineList[i].elements[lineList[i].start_elem];
+
+            var ee = lineList[i].elements[lineList[i].end_elem];
+
+            if (l !== 0) {
+
+                if (context.ipd === "lr") {
+
+                    se.node.style.paddingLeft = lp + "px";
+                    se.node.style.marginLeft = "-" + lp + "px";
+
+                } else if (context.ipd === "rl") {
+
+                    se.node.style.paddingRight = lp + "px";
+                    se.node.style.marginRight = "-" + lp + "px";
+
+                } else if (context.ipd === "tb") {
+
+                    se.node.style.paddingTop = lp + "px";
+                    se.node.style.marginTop = "-" + lp + "px";
+
+                }
+
+                se.node.style.backgroundColor = se.bgcolor;
+
+                if (context.ipd === "lr") {
+
+                    ee.node.style.paddingRight = lp + "px";
+                    ee.node.style.marginRight = "-" + lp + "px";
+
+                } else if (context.ipd === "rl") {
+
+                    ee.node.style.paddingLeft = lp + "px";
+                    ee.node.style.marginLeft = "-" + lp + "px";
+
+                } else if (context.ipd === "tb") {
+
+                    ee.node.style.paddingBottom = lp + "px";
+                    ee.node.style.marginBottom = "-" + lp + "px";
+
+                }
+
+                ee.node.style.backgroundColor = ee.bgcolor;
+
+            }
+
+        }
+
+    }
+
+    function applyMultiRowAlign(lineList) {
+
+        /* apply an explicit br to all but the last line */
+
+        for (var i = 0; i < lineList.length - 1; i++) {
+
+            var l = lineList[i].elements.length;
+
+            if (l !== 0 && lineList[i].br === false) {
+                var br = document.createElement("br");
+
+                var lastnode = lineList[i].elements[l - 1].node;
+
+                lastnode.parentElement.insertBefore(br, lastnode.nextSibling);
+            }
+
+        }
+
+    }
+
+    function applyFillLineGap(lineList, par_before, par_after, context) {
+
+        /* positive for BPD = lr and tb, negative for BPD = rl */
+        var s = Math.sign(par_after - par_before);
+
+        for (var i = 0; i <= lineList.length; i++) {
+
+            /* compute frontier between lines */
+
+            var frontier;
+
+            if (i === 0) {
+
+                frontier = par_before;
+
+            } else if (i === lineList.length) {
+
+                frontier = par_after;
+
+            } else {
+
+                frontier = (lineList[i].before + lineList[i - 1].after) / 2;
+
+            }
+
+            /* padding amount */
+
+            var pad;
+
+            /* current element */
+
+            var e;
+
+            /* before line */
+
+            if (i > 0) {
+
+                for (var j = 0; j < lineList[i - 1].elements.length; j++) {
+
+                    if (lineList[i - 1].elements[j].bgcolor === null) continue;
+
+                    e = lineList[i - 1].elements[j];
+
+                    if (s * (e.after - frontier) < 0) {
+
+                        pad = Math.ceil(Math.abs(frontier - e.after)) + "px";
+
+                        e.node.style.backgroundColor = e.bgcolor;
+
+                        if (context.bpd === "lr") {
+
+                            e.node.style.paddingRight = pad;
+
+
+                        } else if (context.bpd === "rl") {
+
+                            e.node.style.paddingLeft = pad;
+
+                        } else if (context.bpd === "tb") {
+
+                            e.node.style.paddingBottom = pad;
+
+                        }
+
+                    }
+
+                }
+
+            }
+
+            /* after line */
+
+            if (i < lineList.length) {
+
+                for (var k = 0; k < lineList[i].elements.length; k++) {
+
+                    e = lineList[i].elements[k];
+
+                    if (e.bgcolor === null) continue;
+
+                    if (s * (e.before - frontier) > 0) {
+
+                        pad = Math.ceil(Math.abs(e.before - frontier)) + "px";
+
+                        e.node.style.backgroundColor = e.bgcolor;
+
+                        if (context.bpd === "lr") {
+
+                            e.node.style.paddingLeft = pad;
+
+
+                        } else if (context.bpd === "rl") {
+
+                            e.node.style.paddingRight = pad;
+
+
+                        } else if (context.bpd === "tb") {
+
+                            e.node.style.paddingTop = pad;
+
+                        }
+
+                    }
 
                 }
 
             }
 
         }
-    }
 
+    }
 
     function RegionPBuffer(id, lineList) {
 
@@ -7770,68 +8164,126 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 
     }
 
-    function constructElementList(element, elist, bgcolor) {
+    function rect2edges(rect, context) {
 
-        if (element.childElementCount === 0) {
+        var edges = {before: null, after: null, start: null, end: null};
 
-            elist.push({
-                "element": element,
-                "bgcolor": bgcolor}
-            );
+        if (context.bpd === "tb") {
 
-        } else {
+            edges.before = rect.top;
+            edges.after = rect.bottom;
 
-            var newbgcolor = element.style.backgroundColor || bgcolor;
+            if (context.ipd === "lr") {
 
-            var child = element.firstChild;
-
-            while (child) {
-
-                if (child.nodeType === Node.ELEMENT_NODE) {
-
-                    constructElementList(child, elist, newbgcolor);
-
-                }
-
-                child = child.nextSibling;
-            }
-        }
-
-    }
-
-
-    function constructLineList(element, llist) {
-
-        if (element.childElementCount === 0 && element.localName === 'span') {
-
-            var r = element.getBoundingClientRect();
-
-            if (llist.length === 0 ||
-                (!isSameLine(r.top, r.height, llist[llist.length - 1].top, llist[llist.length - 1].height))
-                ) {
-
-                llist.push({
-                    top: r.top,
-                    height: r.height,
-                    text: element.textContent
-                });
+                edges.start = rect.left;
+                edges.end = rect.right;
 
             } else {
 
-                if (r.top < llist[llist.length - 1].top) {
-                    llist[llist.length - 1].top = r.top;
-                }
+                edges.start = rect.right;
+                edges.end = rect.left;
+            }
 
-                if (r.height > llist[llist.length - 1].height) {
-                    llist[llist.length - 1].height = r.height;
+        } else if (context.bpd === "lr") {
+
+            edges.before = rect.left;
+            edges.after = rect.right;
+            edges.start = rect.top;
+            edges.end = rect.bottom;
+
+        } else if (context.bpd === "rl") {
+
+            edges.before = rect.right;
+            edges.after = rect.left;
+            edges.start = rect.top;
+            edges.end = rect.bottom;
+
+        }
+
+        return edges;
+
+    }
+
+    function constructLineList(context, element, llist, bgcolor) {
+
+        var curbgcolor = element.style.backgroundColor || bgcolor;
+
+        if (element.childElementCount === 0) {
+
+            if (element.localName === 'span') {
+
+                var r = element.getBoundingClientRect();
+
+                /* skip if span is not displayed */
+
+                if (r.height === 0 || r.width === 0) return;
+
+                var edges = rect2edges(r, context);
+
+                if (llist.length === 0 ||
+                    (!isSameLine(edges.before, edges.after, llist[llist.length - 1].before, llist[llist.length - 1].after))
+                    ) {
+
+                    llist.push({
+                        before: edges.before,
+                        after: edges.after,
+                        start: edges.start,
+                        end: edges.end,
+                        start_elem: 0,
+                        end_elem: 0,
+                        elements: [],
+                        text: "",
+                        br: false
+                    });
+
+                } else {
+
+                    /* positive for BPD = lr and tb, negative for BPD = rl */
+                    var bpd_dir = Math.sign(edges.after - edges.before);
+
+                    /* positive for IPD = lr and tb, negative for IPD = rl */
+                    var ipd_dir = Math.sign(edges.end - edges.start);
+
+                    /* check if the line height has increased */
+
+                    if (bpd_dir * (edges.before - llist[llist.length - 1].before) < 0) {
+                        llist[llist.length - 1].before = edges.before;
+                    }
+
+                    if (bpd_dir * (edges.after - llist[llist.length - 1].after) > 0) {
+                        llist[llist.length - 1].after = edges.after;
+                    }
+
+                    if (ipd_dir * (edges.start - llist[llist.length - 1].start) < 0) {
+                        llist[llist.length - 1].start = edges.start;
+                        llist[llist.length - 1].start_elem = llist[llist.length - 1].elements.length;
+                    }
+
+                    if (ipd_dir * (edges.end - llist[llist.length - 1].end) > 0) {
+                        llist[llist.length - 1].end = edges.end;
+                        llist[llist.length - 1].end_elem = llist[llist.length - 1].elements.length;
+                    }
+
                 }
 
                 llist[llist.length - 1].text += element.textContent;
 
+                llist[llist.length - 1].elements.push(
+                    {
+                        node: element,
+                        bgcolor: curbgcolor,
+                        before: edges.before,
+                        after: edges.after
+                    }
+                );
+
+            } else if (element.localName === 'br' && llist.length !== 0) {
+
+                llist[llist.length - 1].br = true;
+
             }
 
         } else {
-
 
             var child = element.firstChild;
 
@@ -7839,7 +8291,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 
                 if (child.nodeType === Node.ELEMENT_NODE) {
 
-                    constructLineList(child, llist);
+                    constructLineList(context, child, llist, curbgcolor);
 
                 }
 
@@ -7848,131 +8300,12 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
         }
 
     }
-    
-    function isSameLine(top1, height1, top2, height2) {
 
-        return (((top1 + height1) < (top2 + height2)) && (top1 > top2)) || (((top2 + height2) <= (top1 + height1)) && (top2 >= top1));
+    function isSameLine(before1, after1, before2, after2) {
 
-    }
-
-    function processLinePaddingAndMultiRowAlign(elist, lp) {
-
-        var line_head = null;
-
-        var lookingForHead = true;
-
-        var foundBR = false;
-
-        for (var i = 0; i <= elist.length; i++) {
-
-            /* skip <br> since they apparently have a different box top than
-             * the rest of the line 
-             */
-
-            if (i !== elist.length && elist[i].element.localName === "br") {
-                foundBR = true;
-                continue;
-            }
-
-            /* detect new line */
-
-            if (line_head === null ||
-                i === elist.length ||
-                (!isSameLine(elist[i].element.getBoundingClientRect().top,
-                    elist[i].element.getBoundingClientRect().height,
-                    elist[line_head].element.getBoundingClientRect().top,
-                    elist[line_head].element.getBoundingClientRect().height))
-                ) {
-
-                /* apply right padding to previous line (if applicable and unless this is the first line) */
-
-                if (lp && (!lookingForHead)) {
-
-                    for (; --i >= 0; ) {
-
-                        if (elist[i].element.getBoundingClientRect().width !== 0) {
-
-                            addRightPadding(elist[i].element, elist[i].color, lp);
-
-                            if (elist[i].element.getBoundingClientRect().width !== 0 &&
-                                isSameLine(elist[i].element.getBoundingClientRect().top,
-                                    elist[i].element.getBoundingClientRect().height,
-                                    elist[line_head].element.getBoundingClientRect().top,
-                                    elist[line_head].element.getBoundingClientRect().height))
-                                break;
-
-                            removeRightPadding(elist[i].element);
-
-                        }
-
-                    }
-
-                    lookingForHead = true;
-
-                    continue;
-
-                }
-
-                /* explicit <br> unless already present */
-
-                if (i !== elist.length && line_head !== null && (!foundBR)) {
-
-                    var br = document.createElement("br");
-
-                    elist[i].element.parentElement.insertBefore(br, elist[i].element);
-
-                    elist.splice(i, 0, {"element": br});
-
-                    foundBR = true;
-
-                    continue;
-
-                }
-
-                /* apply left padding to current line (if applicable) */
-
-                if (i !== elist.length && lp) {
-
-                    /* find first non-zero */
-
-                    for (; i < elist.length; i++) {
-
-                        if (elist[i].element.getBoundingClientRect().width !== 0) {
-                            addLeftPadding(elist[i].element, elist[i].color, lp);
-                            break;
-                        }
-
-                    }
-
-                }
-
-                lookingForHead = false;
-
-                foundBR = false;
-
-                line_head = i;
-
-            }
-
-        }
+        return ((after1 < after2) && (before1 > before2)) || ((after2 <= after1) && (before2 >= before1));
 
     }
-
-    function addLeftPadding(e, c, lp) {
-        e.style.paddingLeft = lp + "px";
-        e.style.backgroundColor = c;
-    }
-
-    function addRightPadding(e, c, lp) {
-        e.style.paddingRight = lp + "px";
-        e.style.backgroundColor = c;
-
-    }
-
-    function removeRightPadding(e) {
-        e.style.paddingRight = null;
-    }
-
 
     function HTMLStylingMapDefintion(qName, mapFunc) {
         this.qname = qName;
@@ -7984,6 +8317,10 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
         new HTMLStylingMapDefintion(
             "http://www.w3.org/ns/ttml#styling backgroundColor",
             function (context, dom_element, isd_element, attr) {
+
+                /* skip if transparent */
+                if (attr[3] === 0) return;
+
                 dom_element.style.backgroundColor = "rgba(" +
                     attr[0].toString() + "," +
                     attr[1].toString() + "," +
@@ -8343,7 +8680,8 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 
                     var uri = context.imgResolver(attr, img);
 
-                    if (uri) img.src = uri;
+                    if (uri)
+                        img.src = uri;
 
                     img.height = context.regionH;
                     img.width = context.regionW;
@@ -8434,6 +8772,14 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
         /* create the ISD object from the IMSC1 doc */
 
         var isd = new ISD(tt);
+        
+        /* context */
+        
+        var context = {
+          
+            /* empty for now */
+            
+        };
 
         /* process regions */
 
@@ -8441,7 +8787,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 
             /* post-order traversal of the body tree per [construct intermediate document] */
 
-            var c = isdProcessContentElement(tt, offset, tt.head.layout.regions[r], tt.body, null, '', tt.head.layout.regions[r], errorHandler);
+            var c = isdProcessContentElement(tt, offset, tt.head.layout.regions[r], tt.body, null, '', tt.head.layout.regions[r], errorHandler, context);
 
             if (c !== null) {
 
@@ -8456,11 +8802,13 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
         return isd;
     };
 
-    function isdProcessContentElement(doc, offset, region, body, parent, inherited_region_id, elem, errorHandler) {
+    function isdProcessContentElement(doc, offset, region, body, parent, inherited_region_id, elem, errorHandler, context) {
 
-        /* prune if temporally inactive */
+        /* prune if temporally inactive (<br> are not included in timing) */
 
-        if (offset < elem.begin || offset >= elem.end) return null;
+        if (elem.kind !== 'br' && (offset < elem.begin || offset >= elem.end)) {
+            return null;
+        }
 
         /* 
          * set the associated region as specified by the regionID attribute, or the 
@@ -8641,11 +8989,12 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
             if (cs.compute !== null) {
 
                 var cstyle = cs.compute(
-                    /*doc, parent, element, attr*/
+                    /*doc, parent, element, attr, context*/
                     doc,
                     parent,
                     isd_element,
-                    isd_element.styleAttrs[cs.qname]
+                    isd_element.styleAttrs[cs.qname],
+                    context
                     );
 
                 if (cstyle !== null) {
@@ -8692,7 +9041,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 
         for (var x in contents) {
 
-            var c = isdProcessContentElement(doc, offset, region, body, isd_element, associated_region_id, contents[x]);
+            var c = isdProcessContentElement(doc, offset, region, body, isd_element, associated_region_id, contents[x], errorHandler, context);
 
             /* 
              * keep child element only if they are non-null and their region match 
@@ -9195,7 +9544,7 @@ exports.renderHTML = _dereq_(16).render;
                     }
 
                 },
-                function (doc, parent, element, attr) {
+                function (doc, parent, element, attr, context) {
 
                     var h;
                     var w;
@@ -9286,7 +9635,7 @@ exports.renderHTML = _dereq_(16).render;
                 true,
                 true,
                 imscUtils.parseLength,
-                function (doc, parent, element, attr) {
+                function (doc, parent, element, attr, context) {
 
                     var fs;
 
@@ -9377,7 +9726,7 @@ exports.renderHTML = _dereq_(16).render;
                         return imscUtils.parseLength(str);
                     }
                 },
-                function (doc, parent, element, attr) {
+                function (doc, parent, element, attr, context) {
 
                     var lh;
 
@@ -9450,7 +9799,7 @@ exports.renderHTML = _dereq_(16).render;
                     }
 
                 },
-                function (doc, parent, element, attr) {
+                function (doc, parent, element, attr, context) {
 
                     var h;
                     var w;
@@ -9527,7 +9876,7 @@ exports.renderHTML = _dereq_(16).render;
 
                     return r;
                 },
-                function (doc, parent, element, attr) {
+                function (doc, parent, element, attr, context) {
 
                     var padding;
 
@@ -9657,7 +10006,7 @@ exports.renderHTML = _dereq_(16).render;
                 function (str) {
                     return str;
                 },
-                function (doc, parent, element, attr) {
+                function (doc, parent, element, attr, context) {
                     
                     /* Section 7.16.9 of XSL */
                     
@@ -9729,7 +10078,7 @@ exports.renderHTML = _dereq_(16).render;
                     }
 
                 },
-                function (doc, parent, element, attr) {
+                function (doc, parent, element, attr, context) {
 
                     /*
                      * returns {color: <color>, thickness: <norm length>}
@@ -9861,7 +10210,7 @@ exports.renderHTML = _dereq_(16).render;
                 true,
                 false,
                 imscUtils.parseLength,
-                function (doc, parent, element, attr) {
+                function (doc, parent, element, attr, context) {
                     if (attr.unit === "c") {
 
                         return attr.value / doc.cellResolution.h;
@@ -9904,6 +10253,19 @@ exports.renderHTML = _dereq_(16).render;
                 "forcedDisplay",
                 "false",
                 ['body', 'div', 'p', 'region', 'span'],
+                true,
+                true,
+                function (str) {
+                    return str === 'true' ? true : false;
+                },
+                null
+                ),
+
+        new StylingAttributeDefinition(
+                imscNames.ns_itts,
+                "fillLineGap",
+                "false",
+                ['p'],
                 true,
                 true,
                 function (str) {
@@ -10091,7 +10453,7 @@ if (typeof Object.create === 'function') {
 /*!
  * Determine if an object is a Buffer
  *
- * @author   Feross Aboukhadijeh <feross@feross.org> <http://feross.org>
+ * @author   Feross Aboukhadijeh <https://feross.org>
  * @license  MIT
  */
 
@@ -10124,9 +10486,9 @@ module.exports = Array.isArray || function (arr) {
 if (!process.version ||
     process.version.indexOf('v0.') === 0 ||
     process.version.indexOf('v1.') === 0 && process.version.indexOf('v1.8.') !== 0) {
-  module.exports = nextTick;
+  module.exports = { nextTick: nextTick };
 } else {
-  module.exports = process.nextTick;
+  module.exports = process
 }
 
 function nextTick(fn, arg1, arg2, arg3) {
@@ -10162,6 +10524,7 @@ function nextTick(fn, arg1, arg2, arg3) {
     });
   }
 }
+
 
 }).call(this,_dereq_(26))
 
@@ -10385,7 +10748,7 @@ module.exports = _dereq_(28);
 
 /*<replacement>*/
 
-var processNextTick = _dereq_(25);
+var pna = _dereq_(25);
 /*</replacement>*/
 
 /*<replacement>*/
@@ -10409,10 +10772,13 @@ var Writable = _dereq_(32);
 
 util.inherits(Duplex, Readable);
 
-var keys = objectKeys(Writable.prototype);
-for (var v = 0; v < keys.length; v++) {
-  var method = keys[v];
-  if (!Duplex.prototype[method]) Duplex.prototype[method] = Writable.prototype[method];
+{
+  // avoid scope creep, the keys array can then be collected
+  var keys = objectKeys(Writable.prototype);
+  for (var v = 0; v < keys.length; v++) {
+    var method = keys[v];
+    if (!Duplex.prototype[method]) Duplex.prototype[method] = Writable.prototype[method];
+  }
 }
 
 function Duplex(options) {
@@ -10431,6 +10797,16 @@ function Duplex(options) {
   this.once('end', onend);
 }
 
+Object.defineProperty(Duplex.prototype, 'writableHighWaterMark', {
+  // making it explicit this property is not enumerable
+  // because otherwise some prototype manipulation in
+  // userland will fail
+  enumerable: false,
+  get: function () {
+    return this._writableState.highWaterMark;
+  }
+});
+
 // the no-half-open enforcer
 function onend() {
   // if we allow half-open state, or if the writable side ended,
@@ -10439,7 +10815,7 @@ function onend() {
 
   // no more data can be written.
   // But allow more writes to happen in this tick.
-  processNextTick(onEndNT, this);
+  pna.nextTick(onEndNT, this);
 }
 
 function onEndNT(self) {
@@ -10471,14 +10847,8 @@ Duplex.prototype._destroy = function (err, cb) {
   this.push(null);
   this.end();
 
-  processNextTick(cb, err);
+  pna.nextTick(cb, err);
 };
-
-function forEach(xs, f) {
-  for (var i = 0, l = xs.length; i < l; i++) {
-    f(xs[i], i);
-  }
-}
 },{"11":11,"22":22,"25":25,"30":30,"32":32}],29:[function(_dereq_,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -10554,7 +10924,7 @@ PassThrough.prototype._transform = function (chunk, encoding, cb) {
 
 /*<replacement>*/
 
-var processNextTick = _dereq_(25);
+var pna = _dereq_(25);
 /*</replacement>*/
 
 module.exports = Readable;
@@ -10581,9 +10951,8 @@ var EElistenerCount = function (emitter, type) {
 var Stream = _dereq_(35);
 /*</replacement>*/
 
-// TODO(bmeurer): Change this back to const once hole checks are
-// properly optimized away early in Ignition+TurboFan.
 /*<replacement>*/
+
 var Buffer = _dereq_(41).Buffer;
 var OurUint8Array = global.Uint8Array || function () {};
 function _uint8ArrayToBuffer(chunk) {
@@ -10592,6 +10961,7 @@ function _uint8ArrayToBuffer(chunk) {
 function _isUint8Array(obj) {
   return Buffer.isBuffer(obj) || obj instanceof OurUint8Array;
 }
+
 /*</replacement>*/
 
 /*<replacement>*/
@@ -10620,15 +10990,13 @@ var kProxyEvents = ['error', 'close', 'destroy', 'pause', 'resume'];
 function prependListener(emitter, event, fn) {
   // Sadly this is not cacheable as some libraries bundle their own
   // event emitter implementation with them.
-  if (typeof emitter.prependListener === 'function') {
-    return emitter.prependListener(event, fn);
-  } else {
-    // This is a hack to make sure that our error handler is attached before any
-    // userland ones.  NEVER DO THIS. This is here only because this code needs
-    // to continue to work with older versions of Node.js that do not include
-    // the prependListener() method. The goal is to eventually remove this hack.
-    if (!emitter._events || !emitter._events[event]) emitter.on(event, fn);else if (isArray(emitter._events[event])) emitter._events[event].unshift(fn);else emitter._events[event] = [fn, emitter._events[event]];
-  }
+  if (typeof emitter.prependListener === 'function') return emitter.prependListener(event, fn);
+
+  // This is a hack to make sure that our error handler is attached before any
+  // userland ones.  NEVER DO THIS. This is here only because this code needs
+  // to continue to work with older versions of Node.js that do not include
+  // the prependListener() method. The goal is to eventually remove this hack.
+  if (!emitter._events || !emitter._events[event]) emitter.on(event, fn);else if (isArray(emitter._events[event])) emitter._events[event].unshift(fn);else emitter._events[event] = [fn, emitter._events[event]];
 }
 
 function ReadableState(options, stream) {
@@ -10636,17 +11004,26 @@ function ReadableState(options, stream) {
 
   options = options || {};
 
+  // Duplex streams are both readable and writable, but share
+  // the same options object.
+  // However, some cases require setting options to different
+  // values for the readable and the writable sides of the duplex stream.
+  // These options can be provided separately as readableXXX and writableXXX.
+  var isDuplex = stream instanceof Duplex;
+
   // object stream flag. Used to make read(n) ignore n and to
   // make all the buffer merging and length checks go away
   this.objectMode = !!options.objectMode;
 
-  if (stream instanceof Duplex) this.objectMode = this.objectMode || !!options.readableObjectMode;
+  if (isDuplex) this.objectMode = this.objectMode || !!options.readableObjectMode;
 
   // the point at which it stops calling _read() to fill the buffer
   // Note: 0 is a valid value, means "don't call _read preemptively ever"
   var hwm = options.highWaterMark;
+  var readableHwm = options.readableHighWaterMark;
   var defaultHwm = this.objectMode ? 16 : 16 * 1024;
-  this.highWaterMark = hwm || hwm === 0 ? hwm : defaultHwm;
+
+  if (hwm || hwm === 0) this.highWaterMark = hwm;else if (isDuplex && (readableHwm || readableHwm === 0)) this.highWaterMark = readableHwm;else this.highWaterMark = defaultHwm;
 
   // cast to ints.
   this.highWaterMark = Math.floor(this.highWaterMark);
@@ -11019,7 +11396,7 @@ function emitReadable(stream) {
   if (!state.emittedReadable) {
     debug('emitReadable', state.flowing);
     state.emittedReadable = true;
-    if (state.sync) processNextTick(emitReadable_, stream);else emitReadable_(stream);
+    if (state.sync) pna.nextTick(emitReadable_, stream);else emitReadable_(stream);
   }
 }
 
@@ -11038,7 +11415,7 @@ function emitReadable_(stream) {
 function maybeReadMore(stream, state) {
   if (!state.readingMore) {
     state.readingMore = true;
-    processNextTick(maybeReadMore_, stream, state);
+    pna.nextTick(maybeReadMore_, stream, state);
   }
 }
 
@@ -11083,7 +11460,7 @@ Readable.prototype.pipe = function (dest, pipeOpts) {
   var doEnd = (!pipeOpts || pipeOpts.end !== false) && dest !== process.stdout && dest !== process.stderr;
 
   var endFn = doEnd ? onend : unpipe;
-  if (state.endEmitted) processNextTick(endFn);else src.once('end', endFn);
+  if (state.endEmitted) pna.nextTick(endFn);else src.once('end', endFn);
 
   dest.on('unpipe', onunpipe);
   function onunpipe(readable, unpipeInfo) {
@@ -11273,7 +11650,7 @@ Readable.prototype.on = function (ev, fn) {
       state.readableListening = state.needReadable = true;
       state.emittedReadable = false;
       if (!state.reading) {
-        processNextTick(nReadingNextTick, this);
+        pna.nextTick(nReadingNextTick, this);
       } else if (state.length) {
         emitReadable(this);
       }
@@ -11304,7 +11681,7 @@ Readable.prototype.resume = function () {
 function resume(stream, state) {
   if (!state.resumeScheduled) {
     state.resumeScheduled = true;
-    processNextTick(resume_, stream, state);
+    pna.nextTick(resume_, stream, state);
   }
 }
 
@@ -11341,18 +11718,19 @@ function flow(stream) {
 // This is *not* part of the readable stream interface.
 // It is an ugly unfortunate mess of history.
 Readable.prototype.wrap = function (stream) {
+  var _this = this;
+
   var state = this._readableState;
   var paused = false;
 
-  var self = this;
   stream.on('end', function () {
     debug('wrapped end');
     if (state.decoder && !state.ended) {
       var chunk = state.decoder.end();
-      if (chunk && chunk.length) self.push(chunk);
+      if (chunk && chunk.length) _this.push(chunk);
     }
 
-    self.push(null);
+    _this.push(null);
   });
 
   stream.on('data', function (chunk) {
@@ -11362,7 +11740,7 @@ Readable.prototype.wrap = function (stream) {
     // don't skip over falsy values in objectMode
     if (state.objectMode && (chunk === null || chunk === undefined)) return;else if (!state.objectMode && (!chunk || !chunk.length)) return;
 
-    var ret = self.push(chunk);
+    var ret = _this.push(chunk);
     if (!ret) {
       paused = true;
       stream.pause();
@@ -11383,12 +11761,12 @@ Readable.prototype.wrap = function (stream) {
 
   // proxy certain important events.
   for (var n = 0; n < kProxyEvents.length; n++) {
-    stream.on(kProxyEvents[n], self.emit.bind(self, kProxyEvents[n]));
+    stream.on(kProxyEvents[n], this.emit.bind(this, kProxyEvents[n]));
   }
 
   // when we try to consume some more bytes, simply unpause the
   // underlying stream.
-  self._read = function (n) {
+  this._read = function (n) {
     debug('wrapped _read', n);
     if (paused) {
       paused = false;
@@ -11396,8 +11774,18 @@ Readable.prototype.wrap = function (stream) {
     }
   };
 
-  return self;
+  return this;
 };
+
+Object.defineProperty(Readable.prototype, 'readableHighWaterMark', {
+  // making it explicit this property is not enumerable
+  // because otherwise some prototype manipulation in
+  // userland will fail
+  enumerable: false,
+  get: function () {
+    return this._readableState.highWaterMark;
+  }
+});
 
 // exposed for testing purposes only.
 Readable._fromList = fromList;
@@ -11511,7 +11899,7 @@ function endReadable(stream) {
 
   if (!state.endEmitted) {
     state.ended = true;
-    processNextTick(endReadableNT, state, stream);
+    pna.nextTick(endReadableNT, state, stream);
   }
 }
 
@@ -11521,12 +11909,6 @@ function endReadableNT(state, stream) {
     state.endEmitted = true;
     stream.readable = false;
     stream.emit('end');
-  }
-}
-
-function forEach(xs, f) {
-  for (var i = 0, l = xs.length; i < l; i++) {
-    f(xs[i], i);
   }
 }
 
@@ -11615,39 +11997,28 @@ util.inherits = _dereq_(22);
 
 util.inherits(Transform, Duplex);
 
-function TransformState(stream) {
-  this.afterTransform = function (er, data) {
-    return afterTransform(stream, er, data);
-  };
-
-  this.needTransform = false;
-  this.transforming = false;
-  this.writecb = null;
-  this.writechunk = null;
-  this.writeencoding = null;
-}
-
-function afterTransform(stream, er, data) {
-  var ts = stream._transformState;
+function afterTransform(er, data) {
+  var ts = this._transformState;
   ts.transforming = false;
 
   var cb = ts.writecb;
 
   if (!cb) {
-    return stream.emit('error', new Error('write callback called multiple times'));
+    return this.emit('error', new Error('write callback called multiple times'));
   }
 
   ts.writechunk = null;
   ts.writecb = null;
 
-  if (data !== null && data !== undefined) stream.push(data);
+  if (data != null) // single equals check for both `null` and `undefined`
+    this.push(data);
 
   cb(er);
 
-  var rs = stream._readableState;
+  var rs = this._readableState;
   rs.reading = false;
   if (rs.needReadable || rs.length < rs.highWaterMark) {
-    stream._read(rs.highWaterMark);
+    this._read(rs.highWaterMark);
   }
 }
 
@@ -11656,9 +12027,14 @@ function Transform(options) {
 
   Duplex.call(this, options);
 
-  this._transformState = new TransformState(this);
-
-  var stream = this;
+  this._transformState = {
+    afterTransform: afterTransform.bind(this),
+    needTransform: false,
+    transforming: false,
+    writecb: null,
+    writechunk: null,
+    writeencoding: null
+  };
 
   // start out asking for a readable event once data is transformed.
   this._readableState.needReadable = true;
@@ -11675,11 +12051,19 @@ function Transform(options) {
   }
 
   // When the writable side finishes, then flush out anything remaining.
-  this.once('prefinish', function () {
-    if (typeof this._flush === 'function') this._flush(function (er, data) {
-      done(stream, er, data);
-    });else done(stream);
-  });
+  this.on('prefinish', prefinish);
+}
+
+function prefinish() {
+  var _this = this;
+
+  if (typeof this._flush === 'function') {
+    this._flush(function (er, data) {
+      done(_this, er, data);
+    });
+  } else {
+    done(this, null, null);
+  }
 }
 
 Transform.prototype.push = function (chunk, encoding) {
@@ -11729,27 +12113,25 @@ Transform.prototype._read = function (n) {
 };
 
 Transform.prototype._destroy = function (err, cb) {
-  var _this = this;
+  var _this2 = this;
 
   Duplex.prototype._destroy.call(this, err, function (err2) {
     cb(err2);
-    _this.emit('close');
+    _this2.emit('close');
   });
 };
 
 function done(stream, er, data) {
   if (er) return stream.emit('error', er);
 
-  if (data !== null && data !== undefined) stream.push(data);
+  if (data != null) // single equals check for both `null` and `undefined`
+    stream.push(data);
 
   // if there's nothing in the write buffer, then that means
   // that nothing more will ever be provided
-  var ws = stream._writableState;
-  var ts = stream._transformState;
+  if (stream._writableState.length) throw new Error('Calling transform done when ws.length != 0');
 
-  if (ws.length) throw new Error('Calling transform done when ws.length != 0');
-
-  if (ts.transforming) throw new Error('Calling transform done when still transforming');
+  if (stream._transformState.transforming) throw new Error('Calling transform done when still transforming');
 
   return stream.push(null);
 }
@@ -11784,7 +12166,7 @@ function done(stream, er, data) {
 
 /*<replacement>*/
 
-var processNextTick = _dereq_(25);
+var pna = _dereq_(25);
 /*</replacement>*/
 
 module.exports = Writable;
@@ -11811,7 +12193,7 @@ function CorkedRequest(state) {
 /* </replacement> */
 
 /*<replacement>*/
-var asyncWrite = !process.browser && ['v0.10', 'v0.9.'].indexOf(process.version.slice(0, 5)) > -1 ? setImmediate : processNextTick;
+var asyncWrite = !process.browser && ['v0.10', 'v0.9.'].indexOf(process.version.slice(0, 5)) > -1 ? setImmediate : pna.nextTick;
 /*</replacement>*/
 
 /*<replacement>*/
@@ -11836,6 +12218,7 @@ var Stream = _dereq_(35);
 /*</replacement>*/
 
 /*<replacement>*/
+
 var Buffer = _dereq_(41).Buffer;
 var OurUint8Array = global.Uint8Array || function () {};
 function _uint8ArrayToBuffer(chunk) {
@@ -11844,6 +12227,7 @@ function _uint8ArrayToBuffer(chunk) {
 function _isUint8Array(obj) {
   return Buffer.isBuffer(obj) || obj instanceof OurUint8Array;
 }
+
 /*</replacement>*/
 
 var destroyImpl = _dereq_(34);
@@ -11857,18 +12241,27 @@ function WritableState(options, stream) {
 
   options = options || {};
 
+  // Duplex streams are both readable and writable, but share
+  // the same options object.
+  // However, some cases require setting options to different
+  // values for the readable and the writable sides of the duplex stream.
+  // These options can be provided separately as readableXXX and writableXXX.
+  var isDuplex = stream instanceof Duplex;
+
   // object stream flag to indicate whether or not this stream
   // contains buffers or objects.
   this.objectMode = !!options.objectMode;
 
-  if (stream instanceof Duplex) this.objectMode = this.objectMode || !!options.writableObjectMode;
+  if (isDuplex) this.objectMode = this.objectMode || !!options.writableObjectMode;
 
   // the point at which write() starts returning false
   // Note: 0 is a valid value, means that we always return false if
   // the entire buffer is not flushed immediately on write()
   var hwm = options.highWaterMark;
+  var writableHwm = options.writableHighWaterMark;
   var defaultHwm = this.objectMode ? 16 : 16 * 1024;
-  this.highWaterMark = hwm || hwm === 0 ? hwm : defaultHwm;
+
+  if (hwm || hwm === 0) this.highWaterMark = hwm;else if (isDuplex && (writableHwm || writableHwm === 0)) this.highWaterMark = writableHwm;else this.highWaterMark = defaultHwm;
 
   // cast to ints.
   this.highWaterMark = Math.floor(this.highWaterMark);
@@ -11982,6 +12375,7 @@ if (typeof Symbol === 'function' && Symbol.hasInstance && typeof Function.protot
   Object.defineProperty(Writable, Symbol.hasInstance, {
     value: function (object) {
       if (realHasInstance.call(this, object)) return true;
+      if (this !== Writable) return false;
 
       return object && object._writableState instanceof WritableState;
     }
@@ -12033,7 +12427,7 @@ function writeAfterEnd(stream, cb) {
   var er = new Error('write after end');
   // TODO: defer error events consistently everywhere, not just the cb
   stream.emit('error', er);
-  processNextTick(cb, er);
+  pna.nextTick(cb, er);
 }
 
 // Checks that a user-supplied chunk is valid, especially for the particular
@@ -12050,7 +12444,7 @@ function validChunk(stream, state, chunk, cb) {
   }
   if (er) {
     stream.emit('error', er);
-    processNextTick(cb, er);
+    pna.nextTick(cb, er);
     valid = false;
   }
   return valid;
@@ -12059,7 +12453,7 @@ function validChunk(stream, state, chunk, cb) {
 Writable.prototype.write = function (chunk, encoding, cb) {
   var state = this._writableState;
   var ret = false;
-  var isBuf = _isUint8Array(chunk) && !state.objectMode;
+  var isBuf = !state.objectMode && _isUint8Array(chunk);
 
   if (isBuf && !Buffer.isBuffer(chunk)) {
     chunk = _uint8ArrayToBuffer(chunk);
@@ -12112,6 +12506,16 @@ function decodeChunk(state, chunk, encoding) {
   }
   return chunk;
 }
+
+Object.defineProperty(Writable.prototype, 'writableHighWaterMark', {
+  // making it explicit this property is not enumerable
+  // because otherwise some prototype manipulation in
+  // userland will fail
+  enumerable: false,
+  get: function () {
+    return this._writableState.highWaterMark;
+  }
+});
 
 // if we're already writing something, then just put this
 // in the queue, and wait our turn.  Otherwise, call _write
@@ -12170,10 +12574,10 @@ function onwriteError(stream, state, sync, er, cb) {
   if (sync) {
     // defer the callback if we are being called synchronously
     // to avoid piling up things on the stack
-    processNextTick(cb, er);
+    pna.nextTick(cb, er);
     // this can emit finish, and it will always happen
     // after error
-    processNextTick(finishMaybe, stream, state);
+    pna.nextTick(finishMaybe, stream, state);
     stream._writableState.errorEmitted = true;
     stream.emit('error', er);
   } else {
@@ -12271,6 +12675,7 @@ function clearBuffer(stream, state) {
     } else {
       state.corkedRequestsFree = new CorkedRequest(state);
     }
+    state.bufferedRequestCount = 0;
   } else {
     // Slow case, write chunks one-by-one
     while (entry) {
@@ -12281,6 +12686,7 @@ function clearBuffer(stream, state) {
 
       doWrite(stream, state, false, len, chunk, encoding, cb);
       entry = entry.next;
+      state.bufferedRequestCount--;
       // if we didn't call the onwrite immediately, then
       // it means that we need to wait until it does.
       // also, that means that the chunk and cb are currently
@@ -12293,7 +12699,6 @@ function clearBuffer(stream, state) {
     if (entry === null) state.lastBufferedRequest = null;
   }
 
-  state.bufferedRequestCount = 0;
   state.bufferedRequest = entry;
   state.bufferProcessing = false;
 }
@@ -12347,7 +12752,7 @@ function prefinish(stream, state) {
     if (typeof stream._final === 'function') {
       state.pendingcb++;
       state.finalCalled = true;
-      processNextTick(callFinal, stream, state);
+      pna.nextTick(callFinal, stream, state);
     } else {
       state.prefinished = true;
       stream.emit('prefinish');
@@ -12371,7 +12776,7 @@ function endWritable(stream, state, cb) {
   state.ending = true;
   finishMaybe(stream, state);
   if (cb) {
-    if (state.finished) processNextTick(cb);else stream.once('finish', cb);
+    if (state.finished) pna.nextTick(cb);else stream.once('finish', cb);
   }
   state.ended = true;
   stream.writable = false;
@@ -12424,12 +12829,10 @@ Writable.prototype._destroy = function (err, cb) {
 },{"11":11,"22":22,"25":25,"26":26,"28":28,"34":34,"35":35,"41":41,"45":45}],33:[function(_dereq_,module,exports){
 'use strict';
 
-/*<replacement>*/
-
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var Buffer = _dereq_(41).Buffer;
-/*</replacement>*/
+var util = _dereq_(7);
 
 function copyBuffer(src, target, offset) {
   src.copy(target, offset);
@@ -12496,12 +12899,19 @@ module.exports = function () {
 
   return BufferList;
 }();
-},{"41":41}],34:[function(_dereq_,module,exports){
+
+if (util && util.inspect && util.inspect.custom) {
+  module.exports.prototype[util.inspect.custom] = function () {
+    var obj = util.inspect({ length: this.length });
+    return this.constructor.name + ' ' + obj;
+  };
+}
+},{"41":41,"7":7}],34:[function(_dereq_,module,exports){
 'use strict';
 
 /*<replacement>*/
 
-var processNextTick = _dereq_(25);
+var pna = _dereq_(25);
 /*</replacement>*/
 
 // undocumented cb() API, needed for core, not for public API
@@ -12515,9 +12925,9 @@ function destroy(err, cb) {
     if (cb) {
       cb(err);
     } else if (err && (!this._writableState || !this._writableState.errorEmitted)) {
-      processNextTick(emitErrorNT, this, err);
+      pna.nextTick(emitErrorNT, this, err);
     }
-    return;
+    return this;
   }
 
   // we set destroyed to true before firing error callbacks in order
@@ -12534,7 +12944,7 @@ function destroy(err, cb) {
 
   this._destroy(err || null, function (err) {
     if (!cb && err) {
-      processNextTick(emitErrorNT, _this, err);
+      pna.nextTick(emitErrorNT, _this, err);
       if (_this._writableState) {
         _this._writableState.errorEmitted = true;
       }
@@ -12542,6 +12952,8 @@ function destroy(err, cb) {
       cb(err);
     }
   });
+
+  return this;
 }
 
 function undestroy() {
@@ -14420,9 +14832,33 @@ Stream.prototype.pipe = function(dest, options) {
 };
 
 },{"12":12,"22":22,"27":27,"36":36,"37":37,"38":38,"39":39}],44:[function(_dereq_,module,exports){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 'use strict';
 
+/*<replacement>*/
+
 var Buffer = _dereq_(41).Buffer;
+/*</replacement>*/
 
 var isEncoding = Buffer.isEncoding || function (encoding) {
   encoding = '' + encoding;
@@ -14534,10 +14970,10 @@ StringDecoder.prototype.fillLast = function (buf) {
 };
 
 // Checks the type of a UTF-8 byte, whether it's ASCII, a leading byte, or a
-// continuation byte.
+// continuation byte. If an invalid byte is detected, -2 is returned.
 function utf8CheckByte(byte) {
   if (byte <= 0x7F) return 0;else if (byte >> 5 === 0x06) return 2;else if (byte >> 4 === 0x0E) return 3;else if (byte >> 3 === 0x1E) return 4;
-  return -1;
+  return byte >> 6 === 0x02 ? -1 : -2;
 }
 
 // Checks at most 3 bytes at the end of a Buffer in order to detect an
@@ -14551,13 +14987,13 @@ function utf8CheckIncomplete(self, buf, i) {
     if (nb > 0) self.lastNeed = nb - 1;
     return nb;
   }
-  if (--j < i) return 0;
+  if (--j < i || nb === -2) return 0;
   nb = utf8CheckByte(buf[j]);
   if (nb >= 0) {
     if (nb > 0) self.lastNeed = nb - 2;
     return nb;
   }
-  if (--j < i) return 0;
+  if (--j < i || nb === -2) return 0;
   nb = utf8CheckByte(buf[j]);
   if (nb >= 0) {
     if (nb > 0) {
@@ -14571,7 +15007,7 @@ function utf8CheckIncomplete(self, buf, i) {
 // Validates as many continuation bytes for a multi-byte UTF-8 character as
 // needed or are available. If we see a non-continuation byte where we expect
 // one, we "replace" the validated continuation bytes we've seen so far with
-// UTF-8 replacement characters ('\ufffd'), to match v8's UTF-8 decoding
+// a single UTF-8 replacement character ('\ufffd'), to match v8's UTF-8 decoding
 // behavior. The continuation byte check is included three times in the case
 // where all of the continuation bytes for a character exist in the same buffer.
 // It is also done this way as a slight performance increase instead of using a
@@ -14579,17 +15015,17 @@ function utf8CheckIncomplete(self, buf, i) {
 function utf8CheckExtraBytes(self, buf, p) {
   if ((buf[0] & 0xC0) !== 0x80) {
     self.lastNeed = 0;
-    return '\ufffd'.repeat(p);
+    return '\ufffd';
   }
   if (self.lastNeed > 1 && buf.length > 1) {
     if ((buf[1] & 0xC0) !== 0x80) {
       self.lastNeed = 1;
-      return '\ufffd'.repeat(p + 1);
+      return '\ufffd';
     }
     if (self.lastNeed > 2 && buf.length > 2) {
       if ((buf[2] & 0xC0) !== 0x80) {
         self.lastNeed = 2;
-        return '\ufffd'.repeat(p + 2);
+        return '\ufffd';
       }
     }
   }
@@ -14620,11 +15056,11 @@ function utf8Text(buf, i) {
   return buf.toString('utf8', i, end);
 }
 
-// For UTF-8, a replacement character for each buffered byte of a (partial)
-// character needs to be added to the output.
+// For UTF-8, a replacement character is added when ending on a partial
+// character.
 function utf8End(buf) {
   var r = buf && buf.length ? this.write(buf) : '';
-  if (this.lastNeed) return r + '\ufffd'.repeat(this.lastTotal - this.lastNeed);
+  if (this.lastNeed) return r + '\ufffd';
   return r;
 }
 
